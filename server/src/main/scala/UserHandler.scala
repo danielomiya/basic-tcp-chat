@@ -25,22 +25,34 @@ class UserHandler(socket: Socket, server: ChatServer) extends Runnable with Logg
         logger.info(s"Validation error from ${socket.getInetAddress}")
         conn.close()
       case Some(value) =>
-        usersMap.put(value.username, conn.copy(username = value.username))
-        notifyClients(socket, value.copy(receivedAt = Some(OffsetDateTime.now())))
+        if (usersMap.contains(value.username)) {
+          logger.severe(s"User ${value.username} is already logged in, closing connection")
+          conn.out.println(
+            value.copy(
+              typ = MessageType.UserFailedToJoinChat,
+              sentAt = OffsetDateTime.now(),
+              payload = Some("User is already logged in"),
+            ).asJson
+          )
+          conn.close()
+        } else {
+          usersMap.put(value.username, conn.copy(username = value.username))
+          notifyClients(socket, value.copy(receivedAt = Some(OffsetDateTime.now())))
 
-        breakable {
-          while (conn.in.hasNextLine) { // block until there is a new line
-            val content = conn.in.nextLine()
+          breakable {
+            while (conn.in.hasNextLine) { // block until there is a new line
+              val content = conn.in.nextLine()
 
-            Message.deserialize(content) foreach { message =>
-              val enrichedMessage = message.copy(receivedAt = Some(OffsetDateTime.now()))
-              notifyClients(socket, enrichedMessage)
+              Message.deserialize(content) foreach { message =>
+                val enrichedMessage = message.copy(receivedAt = Some(OffsetDateTime.now()))
+                notifyClients(socket, enrichedMessage)
 
-              if (message.typ == MessageType.UserLeftChat) {
-                logger.info(s"Closed connection from ${socket.getInetAddress}")
-                usersMap.remove(value.username)
-                conn.close()
-                break
+                if (message.typ == MessageType.UserLeftChat) {
+                  logger.info(s"Closed connection from ${socket.getInetAddress}")
+                  usersMap.remove(value.username)
+                  conn.close()
+                  break
+                }
               }
             }
           }

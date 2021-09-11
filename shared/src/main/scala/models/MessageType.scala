@@ -8,7 +8,7 @@ import scala.util.{Failure, Success, Try}
 
 object MessageType extends Enumeration {
   type MessageType = Value
-  val UserTextMessage, UserJoinedChat, UserLeftChat = Value
+  val UserTextMessage, UserJoinedChat, UserLeftChat, UserFailedToJoinChat = Value
 
   implicit lazy val messageTypeCodecJson: CodecJson[MessageType] = CodecJson[MessageType](
     mt => mt.toString.asJson,
