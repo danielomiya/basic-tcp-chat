@@ -9,7 +9,7 @@ object MessageFormatter {
 
   def asText(msg: Message): String = s"${getPrefix(msg)}${getContent(msg)}${getSuffix(msg)}"
 
-  def getPrefix(msg: Message) = {
+  def getPrefix(msg: Message): String = {
     val formattedDate = dateTimeFormatter.format(msg.receivedAt getOrElse msg.sentAt)
     s"[$formattedDate] "
   }

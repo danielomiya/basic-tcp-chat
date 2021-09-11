@@ -6,8 +6,8 @@ import java.util.Scanner
 
 case class UserConnection(username: String, socket: Socket) {
   protected var closed = true
-  protected var _in = getIn
-  protected var _out = getOut
+  protected var _in: Scanner = getIn
+  protected var _out: PrintWriter = getOut
 
   def close(): Unit = {
     if (!closed) {
