@@ -8,8 +8,6 @@ First, start the server:
 
     $ sbt server/run
 
-By default, it runs on port `8080`, but it can be changed on the file [server/src/main/scala/Program.scala](https://github.com/gwyddie/basic-tcp-chat/blob/main/server/src/main/scala/Program.scala#L4).
-
 Then, run the clients:
 
     $ sbt client/run
