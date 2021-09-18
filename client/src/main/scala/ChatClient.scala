@@ -7,6 +7,7 @@ import java.net.Socket
 import java.time.OffsetDateTime
 import java.util.Scanner
 import java.util.concurrent.{ExecutorService, Executors}
+import scala.annotation.tailrec
 
 class ChatClient(host: String = "127.0.0.1", port: Int = 8080, username: String, poolSize: Int = 5)
   extends LoggingMixin {
@@ -21,24 +22,31 @@ class ChatClient(host: String = "127.0.0.1", port: Int = 8080, username: String,
     pool execute new NotificationHandler(conn)
     conn.out.println(createMessage(MessageType.UserJoinedChat).asJson)
 
-    while (keyboard.hasNextLine) {
-      val text = keyboard.nextLine().trim
-      val typ = if (text startsWith "/leave") MessageType.UserLeftChat else MessageType.UserTextMessage
-      val message = createMessage(text, typ)
-
-      if (message.isValid) {
-        conn.out.println(message.asJson)
-
-        if (typ == MessageType.UserLeftChat) {
-          conn.close()
-          System.exit(0)
-        }
-      }
-    }
+    takeInput(keyboard, conn)
   }
 
   def createMessage(text: String, typ: MessageType.Value = MessageType.UserTextMessage): Message =
     Message(username = username, payload = Option(text), typ = typ, sentAt = OffsetDateTime.now())
 
   def createMessage(typ: MessageType.Value): Message = createMessage(null, typ)
+
+  @tailrec
+  private def takeInput(keyboard: Scanner, conn: UserConnection): Unit = {
+    if (!keyboard.hasNextLine) return
+    val text = keyboard.nextLine().trim
+    val typ =
+      if (text startsWith "/leave") MessageType.UserLeftChat
+      else MessageType.UserTextMessage
+    val message = createMessage(text, typ)
+
+    if (message.isValid) {
+      conn.out.println(message.asJson)
+
+      if (typ == MessageType.UserLeftChat) {
+        conn.close()
+        System.exit(0)
+      }
+    }
+    takeInput(keyboard, conn)
+  }
 }

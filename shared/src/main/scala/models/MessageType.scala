@@ -12,7 +12,7 @@ object MessageType extends Enumeration {
 
   implicit lazy val messageTypeCodecJson: CodecJson[MessageType] = CodecJson[MessageType](
     mt => mt.toString.asJson,
-    cursor => cursor.as[String].flatMap { charSeq =>
+    cursor => cursor.as[String] flatMap { charSeq =>
       Try(values.find(_.toString == charSeq).get) match {
         case Failure(exception) => DecodeResult.fail(exception.getMessage, cursor.history)
         case Success(value) => DecodeResult.ok(value)

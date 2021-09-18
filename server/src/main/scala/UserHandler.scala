@@ -5,9 +5,9 @@ import com.github.gwyddie.chat.shared.models.{Message, MessageType, UserConnecti
 
 import java.net.Socket
 import java.time.OffsetDateTime
+import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutorService, Future}
-import scala.util.control.Breaks.{break, breakable}
 
 class UserHandler(socket: Socket, server: ChatServer) extends Runnable with LoggingMixin {
 
@@ -25,7 +25,7 @@ class UserHandler(socket: Socket, server: ChatServer) extends Runnable with Logg
         logger.info(s"Validation error from ${socket.getInetAddress}")
         conn.close()
       case Some(value) =>
-        if (usersMap.contains(value.username)) {
+        if (usersMap contains value.username) {
           logger.severe(s"User ${value.username} is already logged in, closing connection")
           conn.out.println(
             value.copy(
@@ -36,27 +36,31 @@ class UserHandler(socket: Socket, server: ChatServer) extends Runnable with Logg
           )
           conn.close()
         } else {
-          usersMap.put(value.username, conn.copy(username = value.username))
+          usersMap put(value.username, conn.copy(username = value.username))
           notifyClients(socket, value.copy(receivedAt = Some(OffsetDateTime.now())))
-
-          breakable {
-            while (conn.in.hasNextLine) { // block until there is a new line
-              val content = conn.in.nextLine()
-
-              Message.deserialize(content) foreach { message =>
-                val enrichedMessage = message.copy(receivedAt = Some(OffsetDateTime.now()))
-                notifyClients(socket, enrichedMessage)
-
-                if (message.typ == MessageType.UserLeftChat) {
-                  logger.info(s"Closed connection from ${socket.getInetAddress}")
-                  usersMap.remove(value.username)
-                  conn.close()
-                  break
-                }
-              }
-            }
-          }
+          receiveMessages(conn, value.username)
         }
+    }
+  }
+
+  @tailrec
+  private def receiveMessages(conn: UserConnection, username: String): Unit = {
+    val content = conn.in.nextLine()
+
+    Message.deserialize(content) match {
+      case Some(message) =>
+        val enrichedMessage = message.copy(receivedAt = Some(OffsetDateTime.now()))
+        notifyClients(socket, enrichedMessage)
+
+        if (message.typ == MessageType.UserLeftChat) {
+          logger.info(s"Closed connection from ${socket.getInetAddress}")
+          usersMap remove username
+          conn.close()
+        } else {
+          receiveMessages(conn, username)
+        }
+      case None =>
+        logger.severe(s"Received invalid payload: $content")
     }
   }
 }
