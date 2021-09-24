@@ -15,6 +15,7 @@ lazy val server = (project in file("server"))
   .settings(
     name := "chat-server",
     libraryDependencies ++= serverDeps,
+    assembly / assemblyJarName := "chat-server.jar",
     idePackagePrefix := Some("com.github.gwyddie.chat.server"),
   )
 
@@ -23,5 +24,6 @@ lazy val client = (project in file("client"))
   .settings(
     name := "chat-client",
     libraryDependencies ++= clientDeps,
+    assembly / assemblyJarName := "chat-client.jar",
     idePackagePrefix := Some("com.github.gwyddie.chat.client"),
   )
